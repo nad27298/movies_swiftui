@@ -9,3 +9,5 @@ DerivedData/
 # Swift Package Manager
 .build/
 .swiftpm/xcode/package.xcworkspace/xcuserdata/
+# TMDB: cấu hình riêng trên máy
+Configuration/TMDBSecrets.xcconfig

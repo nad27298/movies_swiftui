@@ -1,0 +1,2 @@
+// API key chỉ nằm trong file local bị Git bỏ qua.
+#include? "TMDBSecrets.xcconfig"
