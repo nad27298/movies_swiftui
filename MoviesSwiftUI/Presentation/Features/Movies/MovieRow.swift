@@ -45,3 +45,18 @@ struct MovieRow: View {
         .padding(.vertical, 5)
     }
 }
+
+#if DEBUG
+// @Previewable cho phép khai báo @State ngay trong closure #Preview.
+// Macro tạo View chứa State ở phía sau; không cần tự viết một wrapper chỉ cho biến Bool này.
+// isFavorite là nguồn state; closure toggle sửa state, rồi SwiftUI dựng lại biểu tượng trái tim.
+#Preview("Movie row – thử Favorite", traits: .sizeThatFitsLayout) {
+    @Previewable @State var isFavorite = false
+    MovieRow(movie: PreviewSampleData.movie, isFavorite: isFavorite, toggleFavorite: { isFavorite.toggle() })
+        .padding().tint(AppTheme.accent)
+}
+
+#Preview("Movie row – tên dài", traits: .sizeThatFitsLayout) {
+    MovieRow(movie: PreviewSampleData.movies[1]).padding()
+}
+#endif

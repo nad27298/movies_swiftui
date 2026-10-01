@@ -64,3 +64,13 @@ struct SettingsView: View {
         }
     }
 }
+
+#if DEBUG
+// Picker/Slider/DatePicker vẫn sửa draft bằng Binding như khi chạy app.
+// Save chỉ ghi vào repository mẫu trong bộ nhớ, không đổi UserDefaults thật.
+#Preview("Settings") {
+    PreviewHost { context in
+        SettingsView(store: context.settings)
+    }
+}
+#endif

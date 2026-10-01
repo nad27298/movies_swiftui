@@ -72,3 +72,13 @@ struct ProfileMenuView: View {
         .interactiveDismissDisabled(library.isReminderBusy)
     }
 }
+
+#if DEBUG
+// Menu tự có NavigationStack; không bọc thêm một stack bên ngoài.
+// NavigationLink tới editor/Show All vẫn dùng store mẫu của cùng context.
+#Preview("Hồ sơ và lịch nhắc") {
+    PreviewHost { context in
+        ProfileMenuView(library: context.library)
+    }
+}
+#endif

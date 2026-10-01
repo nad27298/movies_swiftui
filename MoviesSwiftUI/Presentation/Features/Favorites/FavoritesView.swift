@@ -93,3 +93,20 @@ struct FavoritesView: View {
         }
     }
 }
+
+#if DEBUG
+// Store có dữ liệu mẫu trong bộ nhớ; tìm kiếm vẫn chạy Combine của ViewModel thật.
+// Xóa phim trong Preview chỉ sửa mảng mẫu, không xóa Favorite đã lưu của app.
+#Preview("Favorites") {
+    PreviewHost { context in
+        FavoritesView(repository: context.movieRepository, library: context.library)
+    }
+}
+
+// Một tùy chọn seed nhỏ đủ xem empty UI, không cần thêm hệ thống mô phỏng mọi trạng thái.
+#Preview("Favorites – rỗng") {
+    PreviewHost(hasFavorites: false) { context in
+        FavoritesView(repository: context.movieRepository, library: context.library)
+    }
+}
+#endif

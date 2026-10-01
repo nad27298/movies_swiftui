@@ -17,3 +17,10 @@ import SwiftUI
 struct LoadingStateView: View {
     var body: some View { ProgressView("Đang tải…").frame(maxWidth: .infinity, minHeight: 120) }
 }
+
+#if DEBUG
+// Component không cần Environment hoặc ViewModel, nên Preview dựng trực tiếp là đủ.
+#Preview("Đang tải", traits: .sizeThatFitsLayout) {
+    LoadingStateView()
+}
+#endif

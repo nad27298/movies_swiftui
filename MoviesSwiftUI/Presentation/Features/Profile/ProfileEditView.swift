@@ -107,3 +107,21 @@ struct AvatarView: View {
         .frame(width: size, height: size).clipShape(Circle()).accessibilityLabel("Ảnh đại diện")
     }
 }
+
+#if DEBUG
+// Form không sở hữu NavigationStack vì khi chạy app nó được push từ menu.
+// Preview bọc stack để hiện title/nút Save. Dữ liệu profile dùng repository mẫu.
+// PhotosPicker/camera là UI hệ thống: kiểm tra chúng bằng Simulator/thiết bị thật.
+#Preview("Chỉnh hồ sơ") {
+    PreviewHost { context in
+        NavigationStack {
+            ProfileEditView(store: context.profile)
+        }
+    }
+}
+
+// Avatar là component độc lập: không cần tạo toàn bộ store để xem hình mặc định.
+#Preview("Avatar mặc định", traits: .sizeThatFitsLayout) {
+    AvatarView(data: nil, size: 100).padding()
+}
+#endif

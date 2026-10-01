@@ -66,6 +66,7 @@ MoviesSwiftUI/
 │   ├── Stores/               # Snapshot dùng chung giữa nhiều màn
 │   ├── Features/             # View/ViewModel theo tính năng
 │   └── Bridges/              # CameraPicker và WebView
+├── PreviewSupport/           # Dữ liệu mẫu và Environment cho Canvas (chỉ Debug)
 ├── Shared/
 │   ├── Components/           # Poster, loading, lỗi, empty và alert
 │   └── Theme/                # Màu chủ đạo và chiều rộng nội dung
@@ -155,6 +156,71 @@ Inject dependency/state dùng chung xuống cây View. AppRoot inject library, p
 Task, Combine subscription và WKWebView reference là công cụ điều phối, không phải dữ liệu để dựng UI. Chúng được loại khỏi Observation khi thích hợp.
 
 State UI như `isLoading` vẫn observable. Không dùng `@ObservationIgnored` để che một giá trị View cần theo dõi.
+
+## Học UI bằng SwiftUI Preview
+
+Các component và màn hình SwiftUI chính đã có `#Preview` ở cuối file. Phần này dành để học bố cục, control native và state đơn giản; chưa mô phỏng toàn bộ app hay các tình huống API phức tạp.
+
+### Cách mở và sử dụng
+
+1. Mở một file như `MovieRow.swift`, `MoviesView.swift` hoặc `SettingsView.swift` trong Xcode.
+2. Bật **Editor → Canvas**, rồi **Resume** nếu Canvas đang tạm dừng.
+3. Chọn ví dụ theo tên Preview. `FavoritesView.swift` có cả danh sách mẫu và danh sách rỗng.
+4. Chọn Preview destination iPhone/iPad để xem bố cục theo thiết bị. Đổi appearance và cỡ chữ trong Canvas để học Dark Mode/Dynamic Type.
+5. Bật chế độ tương tác để thử Favorite, đổi list/grid, tìm kiếm hoặc sửa form. Khi đổi code hoặc tạo lại Preview, dữ liệu mẫu có thể được khởi tạo lại.
+
+Preview vẫn cần Xcode biên dịch code và resolve các package. Dữ liệu mẫu không cần TMDB API key hoặc mạng; điều này không có nghĩa Canvas chạy được khi project đang có lỗi compile.
+
+### Từ Preview đơn giản đến màn có dependency
+
+Một component chỉ nhận giá trị có thể dựng trực tiếp:
+
+```swift
+#if DEBUG
+#Preview("Poster", traits: .sizeThatFitsLayout) {
+    PosterView(path: nil, width: 130, height: 195).padding()
+}
+#endif
+```
+
+`#Preview` là macro giúp Xcode tìm ví dụ UI và dựng nó trong Canvas. Closure trả về View, không thêm một màn mới vào navigation của app. `.sizeThatFitsLayout` phù hợp khi chỉ muốn xem kích thước nội dung của component thay vì một màn hình đầy đủ.
+
+Với một biến tương tác nhỏ, `@Previewable @State` cho phép đặt state ngay trong closure. Xem `MovieRow.swift`: bấm nút gọi `isFavorite.toggle()`, state đổi và SwiftUI cập nhật trái tim. Macro `@Previewable` tạo View chứa property wrapper ở phía sau; không dùng nó để khai báo state trong closure thông thường.
+
+Màn có ViewModel và Environment dùng helper chung:
+
+```swift
+#if DEBUG
+#Preview("Movies") {
+    PreviewHost { context in
+        MoviesView(repository: context.movieRepository)
+    }
+}
+#endif
+```
+
+`PreviewHost` giữ một `PreviewContext` bằng `@State` và cấp `MovieLibraryStore`, `SettingsStore`, `ProfileStore`, `AppRouter` bằng `.environment(...)`. Các màn dùng `@Environment(Type.self)` cần những object này; truyền repository thôi chưa đủ. Host giữ cùng instance cho ViewModel và Environment để state không bị chia thành hai nguồn khác nhau.
+
+`PreviewContext` tạo các implementation nhỏ của protocol có sẵn. Repository phim trả `PreviewSampleData`, nên `.task` của ViewModel thật vẫn chạy qua luồng nhận dữ liệu bình thường. Favorite, reminder, settings và profile mẫu lưu trong bộ nhớ, không mở SwiftData hay dùng UserDefaults thật. Mỗi context có bộ state riêng, không dùng singleton; tìm kiếm Favorites vẫn chạy Combine thật.
+
+Nếu thử lưu ảnh profile, `AvatarFileStorage` nhận thư mục tạm có UUID của context thay vì Application Support. Context dọn thư mục này khi được giải phóng. Scheduler mẫu chỉ trả kết quả giả lập trong bộ nhớ, không xin quyền hoặc đặt notification thật. Mọi ảnh phim/diễn viên mẫu có path `nil`, nên chỉ hiện placeholder và không tải ảnh từ TMDB.
+
+Các khai báo Preview và helper được bọc `#if DEBUG`, không đưa vào bản Release. App chạy bình thường vẫn dùng dependency thật do `AppDependencies` tạo; helper Preview không thay đổi bootstrap của app.
+
+### Nên đọc file nào trước?
+
+- `MovieRow.swift`: ví dụ component và `@Previewable @State` tương tác.
+- `MovieGridItem.swift`: item đặt trong `LazyVGrid` để học layout theo chiều rộng.
+- `PreviewSampleData.swift`: sửa tên, điểm, ngày và nội dung để thử UI.
+- `PreviewHost.swift` và `PreviewContext.swift`: cách cấp dependency/Environment mẫu cho màn thật.
+- `MoviesView.swift`, `FavoritesView.swift`, `SettingsView.swift`: List/Grid, search và Form.
+- `MovieDetailView.swift`, `ProfileEditView.swift`, `RemindersView.swift`: màn con cần bọc `NavigationStack` khi Preview độc lập. Menu, Settings và ReminderEditor đã có stack/container riêng, không bọc thêm.
+
+### Giới hạn có chủ đích
+
+Host chỉ cấp dependency để xem từng màn; nó không dựng `AppRootView` hoặc xử lý presentation/routing toàn app. Nút mở menu, nút đặt lịch ở Detail và thao tác mở phim từ reminder cần app root để hoàn tất luồng; xem menu/editor qua Preview riêng của chúng. Nút Favorite, tìm kiếm, xóa Favorite, đổi list/grid và các control form vẫn dùng state/logic thật với dữ liệu mẫu. Đóng/lưu một màn Preview standalone có thể không dismiss vì không có màn cha đang present nó.
+
+Chưa thêm Preview cho About/WebView và camera: những phần này phụ thuộc trang web hoặc UI hệ thống. PhotosPicker, camera, quyền notification, persistence thực tế và navigation toàn app cần kiểm tra bằng Simulator/thiết bị. Preview giúp chỉnh UI nhanh, không thay thế build/test app.
 
 ## JSON parsing khác binding ở đâu?
 

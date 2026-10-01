@@ -49,3 +49,11 @@ struct PosterView: View {
             .accessibilityHidden(true)
     }
 }
+
+#if DEBUG
+// #Preview khai báo một ví dụ UI cho Canvas của Xcode, không thêm màn hình vào app thật.
+// nil dùng placeholder để học kích thước/crop mà không phụ thuộc tải ảnh từ mạng.
+#Preview("Poster – placeholder", traits: .sizeThatFitsLayout) {
+    PosterView(path: nil, width: 130, height: 195).padding()
+}
+#endif

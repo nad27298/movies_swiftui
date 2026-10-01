@@ -25,3 +25,16 @@ struct MovieGridItem: View {
         .contentShape(Rectangle())
     }
 }
+
+#if DEBUG
+// Xem item trong layout thật mà nó thường được sử dụng: LazyVGrid chọn cột theo chiều rộng.
+// Đổi Preview destination iPhone/iPad để quan sát số cột mà không hardcode tên thiết bị.
+#Preview("Các item trong lưới") {
+    ScrollView {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 145))], spacing: 20) {
+            ForEach(PreviewSampleData.movies) { MovieGridItem(movie: $0) }
+        }
+        .padding()
+    }
+}
+#endif

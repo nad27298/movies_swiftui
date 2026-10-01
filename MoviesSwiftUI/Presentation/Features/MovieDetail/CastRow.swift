@@ -32,3 +32,9 @@ struct CastRow: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Diễn viên", traits: .sizeThatFitsLayout) {
+    CastRow(members: PreviewSampleData.cast).padding()
+}
+#endif

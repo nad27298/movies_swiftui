@@ -61,3 +61,13 @@ struct ReminderEditorView: View {
         .interactiveDismissDisabled(model.isSaving)
     }
 }
+
+#if DEBUG
+// Sheet này tự có NavigationStack; Preview không cần bọc thêm.
+// Có thể đổi DatePicker và thử Save: scheduler mẫu trả kết quả, không đặt notification thật.
+#Preview("Chỉnh lịch nhắc") {
+    PreviewHost { context in
+        ReminderEditorView(movie: PreviewSampleData.movie, library: context.library)
+    }
+}
+#endif

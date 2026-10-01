@@ -17,10 +17,21 @@ import Foundation
 
 
 @MainActor final class AvatarFileStorage {
+    private let directoryURL: URL?
+
+    // App không truyền URL nên vẫn lưu vào Application Support như trước.
+    // Preview truyền thư mục tạm riêng để việc thử lưu ảnh không đụng vào avatar của app.
+    // Đây chỉ là lựa chọn nơi lưu file, không thay đổi cách đọc/ghi hoặc xử lý ảnh.
+    init(directoryURL: URL? = nil) { self.directoryURL = directoryURL }
+
     // FileManager tìm Application Support theo sandbox hiện tại, không hardcode đường dẫn máy.
     // createDirectory cho phép thư mục chưa có tại lần Save đầu tiên.
     // Hàm throws để lỗi filesystem có thể đi lên ProfileStore và UI, thay vì giả vờ ảnh đã lưu.
     private func directory() throws -> URL {
+        if let directoryURL {
+            try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+            return directoryURL
+        }
         let base = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                                 appropriateFor: nil, create: true)
         let url = base.appendingPathComponent("Avatars", isDirectory: true)

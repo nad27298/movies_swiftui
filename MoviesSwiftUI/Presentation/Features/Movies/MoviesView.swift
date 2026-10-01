@@ -157,3 +157,14 @@ struct MoviesView: View {
         catch { actionError = error.localizedDescription }
     }
 }
+
+#if DEBUG
+// PreviewHost cấp store/router mẫu; .task vẫn tải qua repository mẫu của context.
+// Có thể bấm nút list/grid, chọn phim và thử Favorite trong chế độ tương tác của Canvas.
+// Đây là Preview một màn, không khởi tạo bootstrap hoặc toàn bộ tab của app.
+#Preview("Movies") {
+    PreviewHost { context in
+        MoviesView(repository: context.movieRepository)
+    }
+}
+#endif

@@ -25,3 +25,10 @@ struct ErrorStateView: View {
         .padding().frame(maxWidth: .infinity)
     }
 }
+
+#if DEBUG
+// Retry trong ví dụ này không gọi API; bạn đang xem bố cục thông báo và nút native.
+#Preview("Thông báo lỗi", traits: .sizeThatFitsLayout) {
+    ErrorStateView(message: "Không thể tải danh sách phim. Bạn có thể thử lại sau.", retry: {}).padding()
+}
+#endif

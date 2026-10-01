@@ -20,3 +20,9 @@ struct EmptyStateView: View {
     var symbol = "film"
     var body: some View { ContentUnavailableView(title, systemImage: symbol, description: Text(message)) }
 }
+
+#if DEBUG
+#Preview("Danh sách rỗng") {
+    EmptyStateView(title: "Chưa có phim yêu thích", message: "Lưu một bộ phim để thấy nội dung tại đây.", symbol: "heart")
+}
+#endif

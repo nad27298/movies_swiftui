@@ -65,3 +65,15 @@ struct RemindersView: View {
         .buttonStyle(.plain)
     }
 }
+
+#if DEBUG
+// Seed có lịch ngày mai và hôm qua để quan sát cả hai Section mà không sửa đồng hồ máy.
+// NavigationStack chỉ là navigation container cho Preview standalone của màn con.
+#Preview("Lịch nhắc") {
+    PreviewHost { context in
+        NavigationStack {
+            RemindersView(library: context.library)
+        }
+    }
+}
+#endif

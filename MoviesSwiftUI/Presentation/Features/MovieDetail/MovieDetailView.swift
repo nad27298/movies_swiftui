@@ -103,3 +103,15 @@ struct MovieDetailView: View {
         }
     }
 }
+
+#if DEBUG
+// Detail cần NavigationStack của màn cha để hiện navigation title và toolbar.
+// MoviesView đã cung cấp navigation khi chạy app; chỉ Preview standalone cần bọc thêm ở đây.
+#Preview("Chi tiết phim") {
+    PreviewHost { context in
+        NavigationStack {
+            MovieDetailView(movieID: PreviewSampleData.movie.id, repository: context.movieRepository)
+        }
+    }
+}
+#endif
