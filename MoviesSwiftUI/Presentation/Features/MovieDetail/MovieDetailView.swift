@@ -7,9 +7,13 @@
 
 import SwiftUI
 
-// Màn Detail nhận ID và repository, rồi sở hữu ViewModel bằng @State.
+// Màn Detail nhận ViewModel do Movies/Favorites sở hữu; View này tập trung dựng UI.
+// let giữ reference tới model đã được cấp, không tạo một nguồn dữ liệu độc lập bằng @State.
+// Model có @Observable nên các thuộc tính được đọc trong body vẫn cập nhật UI khi thay đổi.
 // Thư viện Favorite/Reminder dùng chung được đọc từ Environment, không sao chép thành bool cục bộ.
-// .task yêu cầu tải khi xuất hiện, onDisappear hủy công việc của màn.
+// Màn navigation cha quyết định tải/hủy theo tab, movie ID và cột đang được chọn.
+// onDisappear của View con có thể phát sinh khi NavigationSplitView chuyển cột/identity,
+// nên callback đó chưa đủ để kết luận người dùng đã Back và hủy request đang cần.
 // ViewThatFits thử bố cục ngang rồi dọc theo không gian và cỡ chữ, không chỉ dựa tên thiết bị.
 // Thông tin phim và cast hiển thị state riêng, nên API một phần lỗi không che toàn bộ màn.
 // Nút Favorite gọi store; nút Reminder gửi snapshot cho router mở editor tại AppRoot.
@@ -20,12 +24,10 @@ import SwiftUI
 struct MovieDetailView: View {
     @Environment(MovieLibraryStore.self) private var library
     @Environment(AppRouter.self) private var router
-    @State private var model: MovieDetailViewModel
+    let model: MovieDetailViewModel
     @State private var actionError: String?
 
-    init(movieID: Int, repository: any MovieRepository) {
-        _model = State(initialValue: MovieDetailViewModel(movieID: movieID, repository: repository))
-    }
+    init(model: MovieDetailViewModel) { self.model = model }
 
     var body: some View {
         ScrollView {
@@ -81,8 +83,6 @@ struct MovieDetailView: View {
         }
         .navigationTitle("Chi tiết phim")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await model.loadIfNeeded() }
-        .onDisappear { model.cancel() }
         .messageAlert($actionError)
     }
 
@@ -105,13 +105,26 @@ struct MovieDetailView: View {
 }
 
 #if DEBUG
-// Detail cần NavigationStack của màn cha để hiện navigation title và toolbar.
-// MoviesView đã cung cấp navigation khi chạy app; chỉ Preview standalone cần bọc thêm ở đây.
+// App có Movies/Favorites làm owner; Preview standalone cần một owner nhỏ tương ứng.
+// Wrapper giữ model ổn định bằng @State, không tạo model mới mỗi lần body cập nhật.
+// NavigationStack cung cấp title/toolbar; repository vẫn là dữ liệu mẫu từ PreviewHost.
+private struct MovieDetailPreview: View {
+    @State private var model: MovieDetailViewModel
+
+    init(repository: any MovieRepository) {
+        _model = State(initialValue: MovieDetailViewModel(movieID: PreviewSampleData.movie.id, repository: repository))
+    }
+
+    var body: some View {
+        NavigationStack { MovieDetailView(model: model) }
+            .onAppear { model.loadIfNeeded() }
+            .onDisappear { model.cancel() }
+    }
+}
+
 #Preview("Chi tiết phim") {
     PreviewHost { context in
-        NavigationStack {
-            MovieDetailView(movieID: PreviewSampleData.movie.id, repository: context.movieRepository)
-        }
+        MovieDetailPreview(repository: context.movieRepository)
     }
 }
 #endif

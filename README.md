@@ -103,6 +103,7 @@ View không tự tạo Session hoặc ModelContext. AppDependencies tạo các i
 | `pendingMovieID` | AppRouter | Chờ thao tác lưu và dismissal hoàn tất | Không |
 | `movies`, `nextPage`, `totalPages` | MoviesViewModel | Request thuộc generation hiện tại thành công | Không |
 | `requestGeneration` | MoviesViewModel | Refresh, đổi settings, hủy công việc | Không |
+| `detailModel`, `activeDetailID` | MoviesView / FavoritesView | Mỗi màn giữ model của phim hiện tại và tính ID active từ navigation | Không |
 | `detail`, `cast` và lỗi từng phần | MovieDetailViewModel | Hai request độc lập hoàn tất | Không |
 | `favorites`, `reminders` | MovieLibraryStore | Đọc local/lưu local thành công | SwiftData |
 | `scheduleStatuses` | MovieLibraryStore | Đặt lịch hoặc đối chiếu pending requests | Không |
@@ -247,7 +248,7 @@ DTO được khai báo `nonisolated` và `Sendable` để phù hợp serializer 
 
 SwiftUI tính body nhiều lần khi state thay đổi. Nếu body trực tiếp gọi API, một lần đổi loading hoặc Favorite có thể phát sinh request mới.
 
-App bắt đầu công việc tại `.task` hoặc thao tác người dùng. ViewModel vẫn có guard vì `.task` cũng có thể chạy lại khi View xuất hiện hoặc identity thay đổi.
+App bắt đầu công việc tại `.task`, thao tác người dùng hoặc callback đồng bộ navigation ở màn cha. ViewModel vẫn có guard vì nhiều tín hiệu lifecycle/state có thể cùng yêu cầu tải một dữ liệu.
 
 ### Cancellation và generation
 
@@ -255,7 +256,13 @@ Cancellation giảm công việc không còn cần thiết. Generation/token ch�
 
 Movies tăng generation trước khi hủy task cũ. Cả kết quả và defer kết thúc loading đều kiểm tra generation, nên request cũ không tắt indicator của request mới.
 
-Detail dùng ID trong initializer và `.id(id)` ở host. Detail và cast có task/generation riêng, tránh một lỗi làm mất phần đã tải thành công.
+Movies/Favorites giữ `MovieDetailViewModel` của phim hiện tại bằng `@State` ở màn navigation cha. `MovieDetailView` nhận model qua initializer và đọc các thuộc tính `@Observable` để dựng UI; không tự tạo model hoặc tải/hủy theo lifecycle của View con. `.id(id)` vẫn reset state UI cục bộ khi đổi phim, nhưng không còn quyết định vòng đời của model dữ liệu.
+
+`activeDetailID` là computed property: tab tương ứng phải được chọn, có movie ID, và trên chiều rộng compact cột đang chọn phải là `.detail`. Khi chiều rộng regular hiển thị hai cột, movie ID vẫn active dù preferred compact column là sidebar. `.onChange(..., initial: true)` và `.onAppear` của container gọi private helper để đồng bộ; không gọi API trực tiếp trong `body`.
+
+Nếu ID active khác model hiện tại, owner hủy request cũ và tạo model mới. Nếu không còn ID active vì Back/đổi tab, owner hủy task nhưng giữ snapshot. Mở lại cùng phim gọi `loadIfNeeded()` để chỉ tải phần chưa thành công và chưa có lỗi; lỗi vẫn có nút Retry riêng. Hàm này đồng bộ chỉ khởi động hai Task, còn việc chờ API vẫn bất đồng bộ bên trong các task do ViewModel giữ. Guard loading chặn request trùng khi các callback cùng chạy.
+
+Không dùng `onDisappear` của Detail con làm bằng chứng người dùng đã Back: khi NavigationSplitView chuyển cột hoặc đổi identity, callback này có thể xuất hiện ngay sau `onAppear` và hủy request đang cần. Callback `onDisappear` ở màn cha chỉ hủy khi navigation xác nhận không còn ID active. Vì vậy mở sheet hoặc cập nhật layout không tự động hủy request; nếu layout thực sự quay về sidebar compact thì việc hủy vẫn diễn ra. Detail và cast tiếp tục có task/generation riêng để chặn kết quả cũ và cho phép Retry độc lập.
 
 ### Pagination walkthrough
 

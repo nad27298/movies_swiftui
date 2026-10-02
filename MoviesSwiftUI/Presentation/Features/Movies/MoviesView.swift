@@ -28,6 +28,9 @@ struct MoviesView: View {
     // State gắn với identity của View; initializer có thể được gọi lại nhưng state đã sở hữu vẫn được SwiftUI giữ.
     // Điều này không bảo đảm dữ liệu sống mãi nếu cả View bị tháo/identity đổi.
     @State private var model: MoviesViewModel
+    // Owner nằm ở màn navigation cha để việc View con đổi identity/chuyển cột không hủy dữ liệu.
+    // Giữ một model cho phim hiện tại; đổi phim thay model, Back chỉ hủy request còn chạy.
+    @State private var detailModel: MovieDetailViewModel?
     @State private var actionError: String?
     private let repository: any MovieRepository
 
@@ -61,15 +64,51 @@ struct MoviesView: View {
                 .onDisappear { model.disappear() }
         } detail: {
             if let id = router.homeMovieID {
-                MovieDetailView(movieID: id, repository: repository).id(id)
+                if let detailModel, detailModel.movieID == id {
+                    MovieDetailView(model: detailModel).id(id)
+                } else {
+                    // Selection có thể render trước callback tạo model; không hiển thị snapshot phim cũ.
+                    LoadingStateView().navigationTitle("Chi tiết phim").navigationBarTitleDisplayMode(.inline)
+                }
             } else {
                 EmptyStateView(title: "Chọn một bộ phim", message: "Thông tin chi tiết sẽ hiển thị tại đây.")
             }
+        }
+        // Quan sát navigation trên cả container, không dựa vào onDisappear của View Detail con.
+        // initial xử lý cả route có sẵn; onAppear đồng bộ lại khi quay về tab/container.
+        .onChange(of: activeDetailID, initial: true) { _, _ in synchronizeDetail() }
+        .onAppear { synchronizeDetail() }
+        .onDisappear {
+            // Callback biến mất chỉ hủy nếu router/layout xác nhận Detail không còn active.
+            // Sheet hoặc một lần chuyển cột không được tự coi là thao tác Back.
+            if activeDetailID == nil { detailModel?.cancel() }
         }
         .onChange(of: settings.revision) { _, revision in
             model.settingsChanged(settings.appliedSettings, revision: revision)
         }
         .messageAlert($actionError)
+    }
+
+    private var activeDetailID: Int? {
+        guard router.selectedTab == .movies else { return nil }
+        // Compact chỉ hiện một cột; Back đổi preferredCompactColumn về sidebar.
+        // Regular có thể hiện danh sách và Detail cùng lúc nên không dùng cột compact làm điều kiện.
+        guard sizeClass != .compact || router.homeCompactColumn == .detail else { return nil }
+        return router.homeMovieID
+    }
+
+    private func synchronizeDetail() {
+        guard let id = activeDetailID else {
+            // Không xóa model/snapshot: mở lại cùng phim chỉ tải phần còn thiếu.
+            detailModel?.cancel()
+            return
+        }
+        if detailModel?.movieID != id {
+            detailModel?.cancel()
+            detailModel = MovieDetailViewModel(movieID: id, repository: repository)
+        }
+        // Hàm khởi động task đồng bộ; guard trong model chống onAppear/onChange gọi trùng.
+        detailModel?.loadIfNeeded()
     }
 
     @ViewBuilder private var browser: some View {

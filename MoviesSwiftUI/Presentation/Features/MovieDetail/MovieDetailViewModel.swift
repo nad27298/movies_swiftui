@@ -9,7 +9,8 @@ import Foundation
 import Observation
 
 // State của một movie ID, với hai request độc lập cho phim và cast.
-// ID cố định theo initializer; host dùng .id(id) để lựa chọn phim mới có identity phù hợp.
+// ID cố định theo initializer; Movies/Favorites sở hữu instance bằng @State ở màn navigation cha.
+// Đổi phim tạo model mới; Back giữ snapshot của model hiện tại để mở lại không tải phần đã có.
 // Mỗi request có task/generation/loading/error riêng nên partial failure không xóa kết quả còn lại.
 // loadIfNeeded không gọi lại phần đã thành công chỉ vì View xuất hiện lại.
 // Retry một phần không reload phần khác, tránh duplicate API không cần thiết.
@@ -38,15 +39,15 @@ import Observation
         self.repository = repository
     }
 
-    // Khởi động hai task trước khi await để hai request có thể chờ mạng độc lập.
-    // Await task thứ nhất rồi thứ hai không có nghĩa request thứ hai chỉ bắt đầu sau request thứ nhất.
+    // Màn navigation cha gọi hàm này khi Detail của movieID thực sự active.
+    // Hàm đồng bộ chỉ khởi động hai Task rồi trả về; request bên trong vẫn await API độc lập.
+    // ViewModel giữ task handle để màn cha có thể hủy theo Back/đổi phim/đổi tab.
+    // Không phụ thuộc .task hoặc onDisappear của View con trong NavigationSplitView.
     // Chỉ tải phần chưa có kết quả và chưa có lỗi; lỗi có nút retry tường minh.
-    // Guard trong retry tiếp tục chặn một lần loadIfNeeded khác khi task đã chạy.
-    func loadIfNeeded() async {
+    // Guard trong retry chặn request trùng nếu onAppear/onChange cùng yêu cầu tải.
+    func loadIfNeeded() {
         if detail == nil, detailError == nil { retryDetail() }
         if !hasLoadedCast, castError == nil { retryCast() }
-        await detailTask?.value
-        await castTask?.value
     }
 
     // Loading và generation riêng của Detail, không sửa state cast.
